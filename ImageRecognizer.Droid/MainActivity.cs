@@ -23,7 +23,7 @@ namespace ImageRecognizer.Droid
         private Uri fileUri;
 
         private Button btnCapturePicture;
-        //private Button btnGallery;
+        private Button btnGallery;
 
         protected override void OnCreate(Bundle bundle)
         {
@@ -31,23 +31,27 @@ namespace ImageRecognizer.Droid
             SetContentView(Resource.Layout.Main);
 
             btnCapturePicture = FindViewById<Button>(Resource.Id.btnCapturePicture);
-            //btnGallery = FindViewById<Button>(Resource.Id.btnGallery);
+            btnGallery = FindViewById<Button>(Resource.Id.btnGallery);
             Plugin.TextToSpeech.CrossTextToSpeech.Current.Init();
             btnCapturePicture.Click += (s, args) =>
             {
                 TakePicture();
             };
-            //btnGallery.Click += (s, args) =>
-            //{
-            //    OpenGallery();
-            //};
+            btnGallery.Click += (s, args) =>
+            {
+                OpenGallery();
+            };
         }
 
         #region HelperMethods
 
-        //private void OpenGallery() {
-
-        //}
+        private void OpenGallery() {
+            var imageIntent = new Intent();
+            imageIntent.SetType("image/*");
+            imageIntent.SetAction(Intent.ActionGetContent);
+            StartActivityForResult(
+                Intent.CreateChooser(imageIntent, "Select photo"), 0);
+        }
         private void TakePicture()
         {
             Intent intent = new Intent(MediaStore.ActionImageCapture);
@@ -134,6 +138,28 @@ namespace ImageRecognizer.Droid
                         "Ups! Algo raro pasó. Inténtalo de nuevo :)!",
                         ToastLength.Short)
                         .Show();
+                }
+            }
+            else{
+                if (resultCode == Result.Ok)
+                {
+
+                    ICursor cursor = ContentResolver.Query(data.Data, null, null, null, null);
+                    cursor.MoveToFirst();
+                    string documentId = cursor.GetString(0);
+                    documentId = documentId.Split(':')[1];
+                    cursor.Close();
+
+                    cursor = ContentResolver.Query(
+                    Android.Provider.MediaStore.Images.Media.ExternalContentUri,
+                    null, MediaStore.Images.Media.InterfaceConsts.Id + " = ? ", new[] { documentId }, null);
+                    cursor.MoveToFirst();
+                    string path = cursor.GetString(cursor.GetColumnIndex(MediaStore.Images.Media.InterfaceConsts.Data));
+                    cursor.Close();
+
+                    Intent i = new Intent(this, typeof(ResultActivity));
+                    i.PutExtra("fileUri", Uri.Parse(path));
+                    StartActivity(i);
                 }
             }
         }
